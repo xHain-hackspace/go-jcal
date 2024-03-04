@@ -140,12 +140,16 @@ func unmarshalEvent(properties []JCalProperty) (Event, error) {
 			}
 		}
 	}
-	// Check if all fields are set
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		if v.Field(i).IsZero() {
-			return event, fmt.Errorf("field %s is not set", field.Name)
-		}
+
+	// check if dtstart dtend and summary are set
+	if event.DtStart.IsZero() {
+		return event, fmt.Errorf("dtstart is not set")
+	}
+	if event.DtEnd.IsZero() {
+		return event, fmt.Errorf("dtend is not set")
+	}
+	if event.Summary == "" {
+		return event, fmt.Errorf("summary is not set")
 	}
 
 	return event, nil
