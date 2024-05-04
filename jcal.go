@@ -19,6 +19,7 @@ type Event struct {
 	Summary      string    `jcal:"summary"`
 	Location     string    `jcal:"location"`
 	Description  string    `jcal:"description"`
+	IsAllDay     bool
 }
 
 type JCalObject struct {
@@ -112,23 +113,28 @@ func unmarshalEvent(properties []JCalProperty) (Event, error) {
 			if tag == prop.Name {
 				switch field.Type {
 				case reflect.TypeOf(time.Time{}):
+					// determine time format depending on typename
+					timeFormat := ""
+					switch prop.TypeName {
+					case "date-time":
+						timeFormat = time.RFC3339
+					case "date":
+						// event with a dtstart property of type "date" are considered all day events
+						if prop.Name == "dtstart" {
+							event.IsAllDay = true
+						}
+						timeFormat = "2006-01-02"
+					default:
+						return event, fmt.Errorf("unrecognized TypeName property: %s", prop.TypeName)
+					}
+
 					// Parse date-time strings into time.Time
 					strVal, ok := prop.Values[0].(string)
 					if !ok {
 						return event, fmt.Errorf("%s can not be interpreted as string", prop.Values[0])
 					}
-					// try RFC3339 first but also support simple dates without times
-					parseOk := false
-					var err error
-					var timeVal time.Time
-					for _, timeformat := range []string{time.RFC3339, "2006-01-02"} {
-						timeVal, err = time.Parse(timeformat, strVal)
-						if err == nil {
-							parseOk = true
-							break
-						}
-					}
-					if !parseOk {
+					timeVal, err := time.Parse(timeFormat, strVal)
+					if err != nil {
 						return event, err
 					}
 					v.Field(i).Set(reflect.ValueOf(timeVal))
@@ -153,6 +159,10 @@ func unmarshalEvent(properties []JCalProperty) (Event, error) {
 			}
 		}
 	}
+	// // check if it is an all day event by checking if dtStart has a "date" typename
+	// if event.DtStart.Truncate(24*time.Hour).Compare(event.DtStart) == 0 {
+	// 	event.IsAllDay = true
+	// }
 
 	// check if dtstart dtend and summary are set
 	if event.DtStart.IsZero() {
