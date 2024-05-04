@@ -89,6 +89,7 @@ func (obj *JCalObject) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
 func unmarshalEvent(properties []JCalProperty) (Event, error) {
 	// Check if nil
 	if properties == nil {
@@ -112,13 +113,25 @@ func unmarshalEvent(properties []JCalProperty) (Event, error) {
 				switch field.Type {
 				case reflect.TypeOf(time.Time{}):
 					// Parse date-time strings into time.Time
-					if strVal, ok := prop.Values[0].(string); ok {
-						timeVal, err := time.Parse(time.RFC3339, strVal)
-						if err != nil {
-							return event, err // or handle the error differently
-						}
-						v.Field(i).Set(reflect.ValueOf(timeVal))
+					strVal, ok := prop.Values[0].(string)
+					if !ok {
+						return event, fmt.Errorf("%s can not be interpreted as string", prop.Values[0])
 					}
+					// try RFC3339 first but also support simple dates without times
+					parseOk := false
+					var err error
+					var timeVal time.Time
+					for _, timeformat := range []string{time.RFC3339, "2006-01-02"} {
+						timeVal, err = time.Parse(timeformat, strVal)
+						if err == nil {
+							parseOk = true
+							break
+						}
+					}
+					if !parseOk {
+						return event, err
+					}
+					v.Field(i).Set(reflect.ValueOf(timeVal))
 				case reflect.TypeOf(""):
 					if strVal, ok := prop.Values[0].(string); ok {
 						v.Field(i).SetString(strVal)

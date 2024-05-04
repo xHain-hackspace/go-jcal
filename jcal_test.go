@@ -83,6 +83,48 @@ func TestUnmarshalEvent(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name: "whole day event",
+			properties: []JCalProperty{
+				{
+					Name: "dtstart",
+					Values: []interface{}{
+						"2024-05-04",
+					},
+				},
+				{
+					Name: "dtend",
+					Values: []interface{}{
+						"2024-05-04",
+					},
+				},
+				{
+					Name: "status",
+					Values: []interface{}{
+						"confirmed",
+					},
+				},
+				{
+					Name: "summary",
+					Values: []interface{}{
+						"Whole day Event",
+					},
+				},
+				{
+					Name: "location",
+					Values: []interface{}{
+						"Berlin",
+					},
+				},
+				{
+					Name: "description",
+					Values: []interface{}{
+						"Berlin",
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
 			name:        "empty properties",
 			properties:  []JCalProperty{},
 			expectError: true,
